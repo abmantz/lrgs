@@ -239,6 +239,7 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
       U.inv = matrix(0, nrow=p, ncol=p)
     }
   } else {
+    update.X = FALSE
     update.G = FALSE
     update.pi = FALSE
     update.mu = FALSE
@@ -246,6 +247,8 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
     update.mu0 = FALSE
     update.U = FALSE
     update.W = FALSE
+    update.alpha = FALSE
+    return.X = FALSE
     return.G = FALSE
     return.pi = FALSE
     return.mu = FALSE
@@ -253,6 +256,7 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
     return.mu0 = FALSE
     return.U = FALSE
     return.W = FALSE
+    return.alpha = FALSE
   }
   ##
   Bprior = FALSE
