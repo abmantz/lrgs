@@ -17,7 +17,7 @@ rdirichlet = function(alpha) {
   y / sum(y)
 }
 
-Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, M.inv=NULL, intercept=TRUE, trace='bs', fix='', start=list(), B.prior.mean=NULL, B.prior.cov=NULL, Sigma.prior.scale=NULL, Sigma.prior.dof=NULL, dp.prior.alpha=NULL, dp.prior.beta=NULL, mention.every=NA, save.every=NA, save.to=NA) {
+Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, M.inv=NULL, intercept=TRUE, trace='bs', fix='', start=list(), B.prior.mean=NULL, B.prior.cov=NULL, Sigma.prior.scale=NULL, Sigma.prior.dof=-1, dp.prior.alpha=NULL, dp.prior.beta=NULL, mention.every=NA, save.every=NA, save.to=NA) {
   ## n data points, p covariates and m responses
   ## x.in should be n*p, and y.in n*m
   ## but also allow x.in and/or y.in to be vectors (i.e. p=1 and/or m=1)
@@ -270,11 +270,8 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
   }
   if (length(Sigma.prior.scale) == 0) {
     Sigma.prior.scale = matrix(0, m, m)
-    Sigma.prior.dof = 0
   } else {
     if (!is.matrix(Sigma.prior.scale) | nrow(Sigma.prior.scale) != m | ncol(Sigma.prior.scale) != m) stop(paste('Gibbs.regression: Sigma.prior.scale argument must be a', m, 'x', m, 'matrix'))
-    if (length(Sigma.prior.dof) == 0 | Sigma.prior.dof < 0) stop('Gibbs.regression: Sigma.prior.dof argument must be a non-negative integer')
-    Sigma.prior.dof = as.integer(Sigma.prior.dof)
   }
   ##
   if (return.X) res$X = array(dim=c(n, p+pin, Nsamples))
@@ -322,8 +319,6 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
     ## update the intrinsic scatter
     if (update.Sigma) {
       E = Y - X %*% B # n*m
-      ## Kelly 2007 says n-2 degrees of freedom. Believe this is wrong.
-      ###Sigma.inv = rwishart(n-2, symmsolve(t(E)%*%E)) # m^2
       Sigma.inv = rwishart(n+Sigma.prior.dof, symmsolve(t(E)%*%E + Sigma.prior.scale)) # m^2
       Sigma = symmsolve(Sigma.inv)
     }
@@ -560,4 +555,44 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
     if (!is.na(save.every) & !is.na(save.to) & Isample%%save.every==0) save(res, file=save.to)
   } # end of Gibbs loop
   res
+}
+
+
+## casts the output of Gibbs.regression as a data frame
+## todo: could be an object-oriented specialization of as.data.frame instead
+## todo: proper documentation
+Gibbs.post2dataframe = function(p) {
+  if (length(p) == 0) {
+    f = NULL
+  } else {
+    n = dim(p[[1]])
+    n = n[length(n)]
+    f = data.frame(row.names=1:n)
+    for (n in names(p)) {
+      d = dim(p[[n]])
+      if (length(d) == 1) {
+        f[,n] = p[[n]]
+      } else {
+        if (length(d) == 2) {
+          for (i in 1:d[1]) f[,paste(n, i, sep='')] = p[[n]][i,]
+        } else {
+          if (length(d) == 3) {
+            for (i in 1:d[1]) {
+              for (j in 1:d[2]) {
+                if (j < i & (n=='Sigma' | n=='U' | n=='W')) next # symmetric matrices
+                f[,paste(n, i, j, sep='')] = p[[n]][i,j,]
+              }
+            }
+          } else {
+            ## remaining case is Tau (4D, 1st 2 dimensions are a symmetric matrix)
+            for (i in 1:d[1])
+              for (j in i:d[2])
+                for (k in 1:d[3])
+                  f[,paste(n, i, j, k, sep='')] = p[[n]][i,j,k,]
+          } # 3D
+        } # 2D
+      } # 1D
+    } # next list item
+  } # p NULL
+  f[which(!is.na(f[,1])),]
 }

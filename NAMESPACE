@@ -1,2 +1,3 @@
 import(mvtnorm)
 export(Gibbs.regression)
+export(Gibbs.post2dataframe)

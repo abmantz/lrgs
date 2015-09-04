@@ -11,7 +11,7 @@ Runs a Gibbs sampler to simulate the posterior distribution of a linear model wi
 Gibbs.regression(x.in, y.in, M, Nsamples, Ngauss = 1, dirichlet=FALSE,
  M.inv = NULL, intercept = TRUE, trace = "bs", fix = "", start = list(),
  B.prior.mean=NULL, B.prior.cov=NULL, Sigma.prior.scale=NULL,
- Sigma.prior.dof=NULL, dp.prior.alpha=NULL, dp.prior.beta=NULL,
+ Sigma.prior.dof=-1, dp.prior.alpha=NULL, dp.prior.beta=NULL,
  mention.every=NA, save.every=NA, save.to=NA)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -50,16 +50,16 @@ determines which parameters are NOT varied. See details.
 a list containing starting values for any of the model parameters. These are optional, with the exception of Sigma and Tau if they are fixed. See details.
 }
   \item{B.prior.mean}{
-optional vector giving the mean of a Gaussian prior to be applied to the coefficients. The order is B11, B21, ..., B21, B22, ..., where the first index refers to the covariate and the second to the response. Assumed to be zero if it is not specified but B.prior.cov is.
+optional vector giving the mean of a Gaussian prior to be applied to the coefficients. The order is B11, B21, ..., B12, B22, ..., where the first index refers to the covariate and the second to the response. Assumed to be zero if it is not specified but B.prior.cov is.
 }
   \item{B.prior.cov}{
 optional matrix giving the covariance of a Gaussian prior to be applied to the coefficients. The parameter order is the same as in B.prior.mean. If not specified, an improper uniform prior is used.
 }
   \item{Sigma.prior.scale}{
-optional matrix giving the scale parameter of an inverse-Wishart prior to be applied to the intrinsic covariance.
+optional matrix giving the scale parameter of an inverse-Wishart prior to be applied to the intrinsic covariance. Default is zero.
 }
   \item{Sigma.prior.dof}{
-number of degrees of freedom for the inverse-Wishart prior on the intrinsic covariance.
+number of degrees of freedom for the inverse-Wishart prior on the intrinsic covariance. Default is -1, which corresponds to the Jeffreys (i.e. minimally informative) prior when the default scale matrix is used. Using -(m+1) degrees of freedom with the default scale matrix corresponds to a prior that is uniform in det(Sigma).
 }
   \item{dp.prior.alpha}{
 shape paramerer of a Gamma prior to be applied to the Dirichlet process concentration parameter, if dirichlet=TRUE.
@@ -128,10 +128,10 @@ A list containing samples of the model parameters specified by the trace argumen
 \item{W}{p,p,Nsamples}
 \item{alpha}{Nsamples}
 
-This assumes intercept=TRUE; otherwise, replace p+1 with p everywhere.
+This assumes intercept=TRUE; otherwise, replace p+1 with p everywhere. This list can be transformed into a data frame using the Gibbs.post2dataframe function.
 }
 \references{
-TODO for this function, Kelly (2007, ApJ 665:1489; arXiv:0705.2774; doi:10.1086/519947) for the same approach with a single response variable and a Gaussian mixture of covariates; Neal (2000, Journal of Computational and Graphical Statistics 9:249) for the Dirichlet process algorithm employed.
+Mantz (2015; arXiv:1509.00908) for this function, Kelly (2007, ApJ 665:1489; arXiv:0705.2774; doi:10.1086/519947) for the same approach with a single response variable and a Gaussian mixture of covariates; Neal (2000, Journal of Computational and Graphical Statistics 9:249) for the Dirichlet process algorithm employed.
 }
 \author{
 Adam Mantz
@@ -148,7 +148,7 @@ If your data set is missing the occasional covariate or response measurement, it
 \code{\link{lm}} for classical linear regression.
 }
 \examples{
-# example using the default Ngauss=1 with no measurement errors
+## example using the default Ngauss=1 with no measurement errors
 x <- rnorm(500, 0, 5)
 y <- pi*x + rnorm(length(x), 0, 0.1)
 post <- Gibbs.regression(x, y, NULL, 50, trace='bsmt', fix='xy')
@@ -159,13 +159,14 @@ plot(post$Sigma[1,1,-(1:10)], col=4); abline(h=var(m$residuals), lty=2, col=2)
 plot(post$mu[1,1,-(1:10)], col=4); abline(h=mean(x), lty=2, col=2)
 plot(post$Tau[1,1,1,-(1:10)], col=4); abline(h=var(x), lty=2, col=2)
 
-# verbose example using a Dirichlet process, including measurement errors
+## verbose example using a Dirichlet process, including measurement errors
+## in practice, you would would want a longer chain, i.e. larger nmc
 xx <- rnorm(100, c(-15,0,15), 1)
 yy <- xx + rnorm(length(xx)) + rnorm(length(xx), 0, 3)
 xx <- xx + rnorm(length(xx))
 M = list()
 for (i in 1:length(xx)) M[[i]] <- matrix(c(1,0,0,1), 2, 2)
-nmc = 100
+nmc = 10
 post = Gibbs.regression(xx, yy, M, nmc, dirichlet=TRUE, trace='bsgmta', mention.every=1)
 plot(xx, yy, col=post$G[,nmc]) # plot clusters at the last iteration
 m <- lm(yy~xx)
