@@ -560,7 +560,6 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
 
 ## casts the output of Gibbs.regression as a data frame
 ## todo: could be an object-oriented specialization of as.data.frame instead
-## todo: proper documentation
 Gibbs.post2dataframe = function(p) {
   if (length(p) == 0) {
     f = NULL

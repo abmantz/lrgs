@@ -1,3 +1,4 @@
+importFrom("stats", "approx", "cov", "rbeta", "rgamma", "rmultinom", "rnorm", "runif", "var")
 import(mvtnorm)
 export(Gibbs.regression)
 export(Gibbs.post2dataframe)
