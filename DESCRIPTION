@@ -1,7 +1,7 @@
 Package: lrgs
 Type: Package
 Title: Linear Regression by Gibbs Sampling
-Version: 0.4.0
+Version: 0.4.1
 Date: 2015-09-03
 Author: Adam Mantz
 Maintainer: Adam Mantz <amantz@slac.stanford.edu>
