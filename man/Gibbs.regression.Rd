@@ -23,7 +23,7 @@ the measured covariates. Either an n*p matrix, a vector (if p=1) or NULL (if p=0
 the measured responses. Either an n*m matrix or a vector (if m=1).
 }
   \item{M}{
-a length n list of (p+m)*(p+m) measurement covariance matrices, with covariates ordered before responses. If both M and M.inv are NULL, all measurement errors are taken to be zero.
+a (p+m)*(p+m)*n array holding the n measurement covariance matrices, with covariates ordered before responses within each matrix. If both M and M.inv are NULL, all measurement errors are taken to be zero.
 }
   \item{Nsamples}{
 the number of iterations of the Gibbs sampler to run.
@@ -35,7 +35,7 @@ number of Gaussian mixture components describing the distribution of covariates.
 if TRUE, the prior on covariates is given not by a Gaussian mixture of size Ngauss, but by a Dirichlet process with a Gaussian base distribution (see details). This can be thought of as a Gaussian mixture where Ngauss is learned from the data and marginalized over.
 }
   \item{M.inv}{
-as an alternative to M, the inverses of the n measurement covariance matrices. Note that the M argument takes precedence; pass M=NULL to use M.inv. If both M and M.inv are NULL, all measurement errors are taken to be zero.
+as an alternative to M, the inverses of the n measurement covariance matrices in the same format. Note that the M argument takes precedence; pass M=NULL to use M.inv. If both M and M.inv are NULL, all measurement errors are taken to be zero.
 }
   \item{intercept}{
 if TRUE, the model includes constant (intercept) terms for each response. Otherwise, the intercepts are fixed to zero.
@@ -164,10 +164,11 @@ plot(post$Tau[1,1,1,-(1:10)], col=4); abline(h=var(x), lty=2, col=2)
 xx <- rnorm(100, c(-15,0,15), 1)
 yy <- xx + rnorm(length(xx)) + rnorm(length(xx), 0, 3)
 xx <- xx + rnorm(length(xx))
-M = list()
-for (i in 1:length(xx)) M[[i]] <- matrix(c(1,0,0,1), 2, 2)
-nmc = 10
-post = Gibbs.regression(xx, yy, M, nmc, dirichlet=TRUE, trace='bsgmta', mention.every=1)
+M <- array(0, dim=c(2,2,length(xx)))
+M[1,1,] <- 1
+M[2,2,] <- 1
+nmc <- 10
+post <- Gibbs.regression(xx, yy, M, nmc, dirichlet=TRUE, trace='bsgmta', mention.every=1)
 plot(xx, yy, col=post$G[,nmc]) # plot clusters at the last iteration
 m <- lm(yy~xx)
 plot(post$B[1,1,-1], col=4); abline(h=m$coefficients[1], lty=2, col=2)
