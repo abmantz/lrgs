@@ -22,7 +22,7 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
   ## x.in should be n*p, and y.in n*m
   ## but also allow x.in and/or y.in to be vectors (i.e. p=1 and/or m=1)
   ## To fit only intercepts, pass something of length 0, e.g. double(), as x.in
-  ## M should be a length n list of (p+m)^2 covariances.
+  ## M (p+m)*(p+m)*n array holding the n (p+m)^2 covariances.
   ## Alternatively, M.inv can be set to their inverses.
   ## If both M and M.inv have length 0 (NULL), do not update X or Y (with a warning).
   ## Ngauss=0 is a special case where we take the limit of a uniform prior on x.
@@ -62,13 +62,13 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
   m = ncol(yy)
   if (nrow(yy) != nrow(xx)) stop('Gibbs.regression: number of covariate and response measurements do not match.')
   if (length(M) > 0) {
-    if (nrow(yy) != length(M)) stop('Gibbs.regression: number of measurement covariance entries does not match number of measurements.')
-    for (i in 1:n) if (!is.matrix(M[[i]]) | nrow(M[[i]]) != p+m | ncol(M[[i]]) != p+m) stop(paste('Gibbs.regression: measurement covariance', i, 'is not a matrix or has the wrong size/shape.'))
-    M.inv = list()
-    for (i in 1:n) M.inv[[i]] = symmsolve(M[[i]])
+    if (length(dim(M)) != 3) stop('Gibbs.regression: dimensionality of M is wrong.')
+    if (dim(M)[1] != p+m | dim(M)[2] != p+m | dim(M)[3] != n) stop('Gibbs.regression: shape of measurement covariance array is wrong.')
+    M.inv = array(dim=c(p+m, p+m, n))
+    for (i in 1:n) M.inv[,,i] = symmsolve(M[,,i])
   } else if (length(M.inv) > 0) {
-    if (nrow(yy) != length(M.inv)) stop('Gibbs.regression: number of inverse measurement covariance entries does not match number of measurements.')
-    for (i in 1:n) if (!is.matrix(M.inv[[i]]) | nrow(M.inv[[i]]) != p+m | ncol(M.inv[[i]]) != p+m) stop(paste('Gibbs.regression: inverse measurement covariance', i, 'is not a matrix or has the wrong size/shape.'))
+    if (length(dim(M.inv)) != 3) stop('Gibbs.regression: dimensionality of M.inv is wrong.')
+    if (dim(M.inv)[1] != p+m | dim(M.inv)[2] != p+m | dim(M.inv)[3] != n) stop('Gibbs.regression: shape of inverse measurement covariance array is wrong.')
   } else {
     ## neither M nor M.inv were passed
     if (update.X | update.Y) warning('Gibbs.regression: fixing X and Y because no measurement covariances information was passed.')
@@ -360,10 +360,10 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
           alpha = B[pin,]
         }
         for (i in 1:n) {
-          Fcov.inv = M.inv[[i]][1:p,1:p] + B.Sinv.B
+          Fcov.inv = M.inv[1:p,1:p,i] + B.Sinv.B
           Fcov = symmsolve(Fcov.inv)
           zi = c(xx[i,], yy[i,]-Y[i,])
-          Fpart = (M.inv[[i]] %*% zi)[1:p] + B.Sinv %*% (Y[i,] - alpha)
+          Fpart = (M.inv[,,i] %*% zi)[1:p] + B.Sinv %*% (Y[i,] - alpha)
           Fmean = Fcov %*% Fpart
           inds = which(nG > 0)
           if (nG[G[i]] == 1) inds = inds[-which(inds == G[i])]
@@ -405,9 +405,9 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
           Fpart = Tinv.mu
           gg = which(G == j)
           for (i in gg) {
-            Fcov.inv = Fcov.inv + M.inv[[i]][1:p,1:p] + B.Sinv.B
+            Fcov.inv = Fcov.inv + M.inv[1:p,1:p,i] + B.Sinv.B
             zi = c(xx[i,], yy[i,]-Y[i,])
-            Fpart = Fpart + (M.inv[[i]] %*% zi)[1:p] + B.Sinv %*% (Y[i,] - alpha)
+            Fpart = Fpart + (M.inv[,,i] %*% zi)[1:p] + B.Sinv %*% (Y[i,] - alpha)
           }
           Fcov = symmsolve(Fcov.inv)
           Fmean = Fcov %*% Fpart
@@ -431,13 +431,13 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
           zi = c(xx[i,], yy[i,]) - c(X[i,prange], Y[i,]) # p+m
           mui = mu[G[i],] - X[i,prange] # p
           for (j in 1:p) {
-            s2[j] = 1/(M.inv[[i]][j,j] + Tau.inv[[G[i]]][j,j] + B.Sinv.B.j[j])
+            s2[j] = 1/(M.inv[j,j,i] + Tau.inv[[G[i]]][j,j] + B.Sinv.B.j[j])
             zi.star = zi # p+m
             zi.star[j] = xx[i,j]
             mui.star = mui # p
             mui.star[j] = mu[G[i],j]
             pred = matrix(X[i,-(pin+j)], 1, pin+p-1) %*% matrix(B[-(pin+j),], pin+p-1, m) # 1*m; "matrix" is needed to avoid "non-conformable arguments" error when p=1, m>1
-            xi.hat[j] = s2[j] * (dot(M.inv[[i]][j,], zi.star) + dot(Tau.inv[[G[i]]][j,], mui.star) + dot(B.Sinv[j,], Y[i,]-pred))
+            xi.hat[j] = s2[j] * (dot(M.inv[j,,i], zi.star) + dot(Tau.inv[[G[i]]][j,], mui.star) + dot(B.Sinv[j,], Y[i,]-pred))
           } # next covariate
           X[i,prange] = rnorm(p, xi.hat, sqrt(s2))
         } # next data point
@@ -459,14 +459,14 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
         ## .. and now the real thing:
         ## if p=0, this should properly skip the xx and X below
         zi = c(xx[i,], yy[i,]) - c(X[i,prange], Y[i,]) # NB skipping of intercept column in X, if any; p+m
-        s2 = 1/(diag(M.inv[[i]])[p+1:m] + diag(Sigma.inv)) # m
+        s2 = 1/(diag(M.inv[,,i])[p+1:m] + diag(Sigma.inv)) # m
         ## note: I can't see a way of collapsing this further
         for (j in 1:m) {
           zi.star = zi # p+m
           zi.star[p+j] = yy[i,j]
           qi.star = q[i,] # m
           qi.star[j] = pred[i,j]
-          eta.hat[j] = s2[j] * (dot(M.inv[[i]][p+j,], zi.star) + dot(Sigma.inv[j,], qi.star)) # scalar (index over m)
+          eta.hat[j] = s2[j] * (dot(M.inv[p+j,,i], zi.star) + dot(Sigma.inv[j,], qi.star)) # scalar (index over m)
         } # next response j
         Y[i,] = rnorm(m, eta.hat, sqrt(s2))
       } # next data point
