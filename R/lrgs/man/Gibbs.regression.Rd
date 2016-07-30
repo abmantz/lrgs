@@ -131,7 +131,7 @@ A list containing samples of the model parameters specified by the trace argumen
 This assumes intercept=TRUE; otherwise, replace p+1 with p everywhere. This list can be transformed into a data frame using the Gibbs.post2dataframe function.
 }
 \references{
-Mantz (2015; arXiv:1509.00908) for this function, Kelly (2007, ApJ 665:1489; arXiv:0705.2774; doi:10.1086/519947) for the same approach with a single response variable and a Gaussian mixture of covariates; Neal (2000, Journal of Computational and Graphical Statistics 9:249) for the Dirichlet process algorithm employed.
+Mantz (2016; MNRAS 457:1279; arXiv:1509.00908; doi:10.1093/mnras/stv3008) for this function, Kelly (2007, ApJ 665:1489; arXiv:0705.2774; doi:10.1086/519947) for the same approach with a single response variable and a Gaussian mixture of covariates, Neal (2000, Journal of Computational and Graphical Statistics 9:249) for the Dirichlet process algorithm employed.
 }
 \author{
 Adam Mantz
