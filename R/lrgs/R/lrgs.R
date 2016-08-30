@@ -395,7 +395,7 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
         uniqueX = which(!duplicated(X))
         nclusters = length(uniqueX)
         nG = integer(nclusters)
-        if (return.G) for (j in 1:nclusters) {
+        for (j in 1:nclusters) {
           gg = which(apply(X, 1, function(x) all(x == X[uniqueX[j],])))
           G[gg] = j
           nG[j] = length(gg)
