@@ -12,8 +12,8 @@ Implements a Gibbs sampler to do linear regression with multiple covariates, mul
 \tabular{ll}{
 Package: \tab lrgs\cr
 Type: \tab Package\cr
-Version: \tab 0.5.2\cr
-Date: \tab 2016-08-30\cr
+Version: \tab 0.5.3\cr
+Date: \tab 2016-12-15\cr
 License: \tab MIT\cr
 LazyLoad: \tab yes\cr
 }

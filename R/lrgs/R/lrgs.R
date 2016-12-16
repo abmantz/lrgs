@@ -458,8 +458,13 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
         ## Y[i,1] = rnorm(1, eta.hat, sqrt(s2))
         ## .. and now the real thing:
         ## if p=0, this should properly skip the xx and X below
-        zi = c(xx[i,], yy[i,]) - c(X[i,prange], Y[i,]) # NB skipping of intercept column in X, if any; p+m
-        s2 = 1/(diag(M.inv[,,i])[p+1:m] + diag(Sigma.inv)) # m
+        zi = c(xx[i,], yy[i,]) - c(X[i,prange], Y[i,]) # NB skipping of intercept column in X, if any; p+m        
+        if (p+m == 1) {
+          ## work around for case where M.inv[,,i] is demoted to scalar (causing diag to act completely differently)
+          s2 = 1/(M.inv[,,i] + Sigma.inv) # m
+        } else {
+          s2 = 1/(diag(M.inv[,,i])[p+1:m] + diag(Sigma.inv)) # m
+        }
         ## note: I can't see a way of collapsing this further
         for (j in 1:m) {
           zi.star = zi # p+m
