@@ -6,6 +6,8 @@ Kelly (2007, hereafter K07) described an efficient algorithm, using Gibbs sampli
 
 For questions, comments, requests, problems, etc. use the [issues](https://github.com/abmantz/lrgs/issues).
 
+LRGS can be obtained from [CRAN](https://cran.r-project.org/package=lrgs), although the version hosted there may lag behind this one (see [VERSION.md](VERSION.md)).
+
 ## Graphical Model Representations
 Just for fun, here are graphical representations of the implemented models. They differ only in the hierarchical structure of the covariate prior distribution. In this representation, random variables are circled, measured quantities are double-circled, and fixed quantities are shown as points.
 
