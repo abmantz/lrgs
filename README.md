@@ -1,3 +1,5 @@
+<a href="http://ascl.net/1602.005"><img src="https://img.shields.io/badge/ascl-1602.005-blue.svg?colorB=262255" alt="ascl:1602.005" /></a>
+
 # LRGS: Linear Regression by Gibbs Sampling
 
 [R](https://www.r-project.org/) code implementing a Gibbs sampler to deal with the problem of multivariate linear regression with uncertainties in all measured quantities and intrinsic scatter. Full details can be found in [this paper](http://arxiv.org/abs/1509.00908), the abstract of which appears below.
