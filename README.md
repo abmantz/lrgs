@@ -37,8 +37,9 @@ plot(post$Tau[1,1,1,-(1:10)], col=4); abline(h=var(x), lty=2, col=2)
 xx <- rnorm(100, c(-15,0,15), 1)
 yy <- xx + rnorm(length(xx)) + rnorm(length(xx), 0, 3)
 xx <- xx + rnorm(length(xx))
-M = list()
-for (i in 1:length(xx)) M[[i]] <- matrix(c(1,0,0,1), 2, 2)
+M <- array(0, dim=c(2,2,length(xx)))
+M[1,1,] <- 1
+M[2,2,] <- 1
 nmc = 10
 post = Gibbs.regression(xx, yy, M, nmc, dirichlet=TRUE, trace='bsgmta', mention.every=1)
 plot(xx, yy, col=post$G[,nmc]) # plot clusters at the last iteration
