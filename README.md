@@ -1,4 +1,6 @@
 <a href="http://ascl.net/1602.005"><img src="https://img.shields.io/badge/ascl-1602.005-blue.svg?colorB=262255" alt="ascl:1602.005" /></a>
+<a href="https://cran.r-project.org/package=lrgs"><img src="https://img.shields.io/cran/v/lrgs.svg" alt="CRAN" /></a>
+<a href="https://raw.githubusercontent.com/abmantz/lrgs/master/LICENSE"><img src="https://img.shields.io/cran/l/lrgs.svg" alt="MIT License" /></a>
 
 # LRGS: Linear Regression by Gibbs Sampling
 
