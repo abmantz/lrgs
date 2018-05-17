@@ -209,8 +209,10 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
     } else {
       if ('Tau' %in% names(start)) {
         if (!all(dim(start$Tau) == c(p,p,Ngauss))) stop('Gibbs.regression: dimensions of start$Tau are wrong.')
-        for (k in 1:Ngauss) Tau[[k]] = start$Tau[,,k]
-        Tau.inv[[k]] = symmsolve(Tau[[k]])
+        for (k in 1:Ngauss) {
+          Tau[[k]] = as.matrix(start$Tau[,,k])
+          Tau.inv[[k]] = symmsolve(Tau[[k]])
+        }
       } else {
         if (!update.Tau) stop('Gibbs.regression: a starting value must be passed if Tau is fixed and Ngauss > 0.')
       }
