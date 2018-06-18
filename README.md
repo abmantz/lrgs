@@ -11,36 +11,3 @@ Kelly (2007, hereafter K07) described an efficient algorithm, using Gibbs sampli
 For questions, comments, requests, problems, etc. use the [issues](https://github.com/abmantz/lrgs/issues).
 
 LRGS can be obtained from [CRAN](https://cran.r-project.org/package=lrgs), although the version hosted there may lag behind this one (see [VERSION.md](VERSION.md)).
-
-## Graphical Model Representations
-Just for fun, here are graphical representations of the implemented models. They differ only in the hierarchical structure of the covariate prior distribution. In this representation, random variables are circled, measured quantities are double-circled, and fixed quantities are shown as points.
-
-Gaussian mixture           |  Dirichlet process
-:-------------------------:|:-------------------------:
-![Mixture model](./pgm_mix.png) | ![Dirichlet process model](./pgm_dp.png)
-
-## Example usage
-These examples appear in the R documentation for the Gibbs.regression function. Each one creates a mock data set and then fits a linear model to it, and compares the results to traditional regression. You can see the results, including plots, in [this ipython notebook](./Gibbs_regression_example.ipynb).
-
-```R
-## example using the default Ngauss=1 with no measurement errors
-x <- rnorm(500, 0, 5)
-y <- pi*x + rnorm(length(x), 0, 0.1)
-post <- Gibbs.regression(x, y, NULL, 50, trace='bsmt', fix='xy')
-m <- lm(y~x)
-plot(post$B[1,1,-(1:10)], col=4); abline(h=m$coefficients[1], lty=2, col=2)
-plot(post$B[2,1,-(1:10)], col=4); abline(h=m$coefficients[2], lty=2, col=2)
-plot(post$Sigma[1,1,-(1:10)], col=4); abline(h=var(m$residuals), lty=2, col=2)
-plot(post$mu[1,1,-(1:10)], col=4); abline(h=mean(x), lty=2, col=2)
-plot(post$Tau[1,1,1,-(1:10)], col=4); abline(h=var(x), lty=2, col=2)
-
-## verbose example using a Dirichlet process, including measurement errors
-## in practice, you would would want a longer chain, i.e. larger nmc
-xx <- rnorm(100, c(-15,0,15), 1)
-yy <- xx + rnorm(length(xx)) + rnorm(length(xx), 0, 3)
-xx <- xx + rnorm(length(xx))
-M <- array(0, dim=c(2,2,length(xx)))
-M[1,1,] <- 1
-M[2,2,] <- 1
-nmc = 10
-post = Gibbs.regression(xx, yy, M, nmc, dirichlet=TRUE, trace='bsgmta', mention.every=1)
