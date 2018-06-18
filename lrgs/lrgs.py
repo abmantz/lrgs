@@ -1,4 +1,5 @@
 import numpy as np
+import pandas
 import scipy.stats as st
 
 class Chain(dict):
@@ -18,6 +19,29 @@ class Chain(dict):
                 break
     def extract(self, field, *args):
         return self.__getattribute__(field).__getitem__(args)
+    def to_dataframe(self, trace):
+        return pandas.DataFrame(self.to_dict(trace))
+    def to_dict(self, trace):
+        cols = self.params._namecolumns(trace)
+        f = {}
+        for col in cols:
+            w = col.split('_')
+            k = w.pop(0)
+            i = [int(j) for j in w]
+            i.insert(0, k)
+            f[col] = self.extract(*i)
+        return f
+    def to_recarray(self, trace):
+        cols = self.params._namecolumns(trace)
+        f = np.recarray((self.nmc, len(cols)), dtype=[(c, float) for c in cols])
+        for col in cols:
+            w = col.split('_')
+            k = w.pop(0)
+            i = [int(j) for j in w]
+            i.insert(0, k)
+            f[col] = np.asmatrix(self.extract(*i)).T
+        return f
+        
 
 # base class; does not implement a p(x) model and hence cannot sample X
 class Parameters:
@@ -59,7 +83,7 @@ class Parameters:
         self.B = np.matrix(np.zeros((self.p+self.pin,self.m)), copy=False) # (p+pin)*m
         if intercept: self.B[0,:] = np.mean(self.Y, axis=0)
         self.Sigma = np.matrix(np.diag(np.var(self.Y, axis=0)), copy=False) # m*m
-        self.Sigma_inv = 1.0 / self.Sigma**2
+        self.Sigma_inv = 1.0 / self.Sigma
     def update_Sigma(self):
         E = self.Y - self.X * self.B # n*m
         self.Sigma_inv = st.wishart.rvs(self.n + self.Sigma_prior_dof, np.linalg.inv(E.T*E + self.Sigma_prior_scale))
@@ -74,7 +98,7 @@ class Parameters:
         S_tilde_cal = np.matrix(np.zeros((self.m*(self.p+self.pin), self.m*(self.p+self.pin))), copy=False) # [(p+pin)m]^2
         XtXinv = np.linalg.inv(self.X.T * self.X) # (p+pin)^2
         XtXinvXt = XtXinv * self.X.T
-        for j in range(self.m): B_tilde_cal[np.arange(self.p+self.pin)+j*(self.p+self.pin)] = (XtXinvXt * Y_tilde[np.arange(self.n+j*self.n),0]).T # each chunk (p+pin)*1 is the solution (B) to X*B=Y
+        for j in range(self.m): B_tilde_cal[np.arange(self.p+self.pin)+j*(self.p+self.pin)] = (XtXinvXt * Y_tilde[np.arange(self.n)+j*self.n,0]).T # each chunk (p+pin)*1 is the solution (B) to X*B=Y
         for i in range(self.m):
             for j in range(self.m):
                 S_tilde_cal[np.ix_(np.arange(self.p+self.pin)+i*(self.p+self.pin), np.arange(self.p+self.pin)+j*(self.p+self.pin))] = XtXinv * self.Sigma[i,j]
@@ -107,13 +131,29 @@ class Parameters:
         if fix.find('b') == -1: self.update_B()
         if fix.find('y') == -1: self.update_Y()
     def _init_chain(self, chain, nmc, trace):
-        if trace.find('s') != -1: chain.Sigma = np.empty((self.m, self.m, nmc)) * np.nan
-        if trace.find('b') != -1: chain.B = np.empty((self.p+self.pin, self.m, nmc)) * np.nan
-        if trace.find('y') != -1: chain.Y = np.empty((self.n, self.m, nmc)) * np.nan
+        if trace.find('s') != -1: chain.Sigma = np.full((self.m, self.m, nmc), np.nan)
+        if trace.find('b') != -1: chain.B = np.full((self.p+self.pin, self.m, nmc), np.nan)
+        if trace.find('y') != -1: chain.Y = np.full((self.n, self.m, nmc), np.nan)
     def _store(self, chain, i):
         if chain.trace.find('s') != -1: chain.Sigma[:,:,i] = self.Sigma
         if chain.trace.find('b') != -1: chain.B[:,:,i] = self.B
         if chain.trace.find('y') != -1: chain.Y[:,:,i] = self.Y
+    def _namecolumns(self, trace):
+        c = []
+        for param in trace:
+            if param == 'Sigma':
+                for i in range(self.m):
+                    for j in range(i+1):
+                        c.append('_'.join(['Sigma', str(i), str(j)]))
+            elif param == 'B':
+                for i in range(self.pin+self.p):
+                    for j in range(self.m):
+                        c.append('_'.join(['B', str(i), str(j)]))
+            elif param == 'Y':
+                for i in range(self.n):
+                    for j in range(self.m):
+                        c.append('_'.join(['Y', str(i), str(j)]))
+        return c
 
 
 
@@ -130,7 +170,8 @@ class Parameters_Uniform(Parameters):
             s2[j] = 1.0/(self.M_inv[i][j,j] + B_Sinv_B_j[j])
             zi_star = zi.copy() # p+m
             zi_star[j] = self.xdata[i,j]
-            inds = range(self.pin+self.p).pop(self.pin+j)
+            inds = range(self.pin+self.p)
+            inds.pop(self.pin+j)
             pred = self.X[i,inds] * self.B[inds,:] # 1*m
             xi_hat[j] = s2[j] * (np.dot(self.M_inv[i][j,:], zi_star) + np.dot(B_Sinv[j,:], self.Y[i,:] - pred))
             # next covariate
@@ -141,12 +182,20 @@ class Parameters_Uniform(Parameters):
         if fix.find('x') == -1: self.update_X()
     def _init_chain(self, chain, nmc, trace):
         Parameters._init_chain(self, chain, nmc, trace)
-        if trace.find('x') != -1: chain.X = np.empty((self.n, self.p, nmc)) * np.nan
+        if trace.find('x') != -1: chain.X = np.full((self.n, self.p, nmc), np.nan)
     def _store(self, chain, i):
         Parameters._store(self, chain, i)
         if chain.trace.find('x') != -1:
             if self.pin == 1: chain.X[:,:,i] = self.X[:,-1]
             else: chain.X[:,:,i] = self.X
+    def _namecolumns(self, trace):
+        c = Parameters._namecolumns(self, trace)
+        for param in trace:
+            if param == 'X':
+                for i in range(self.n):
+                    for j in range(self.m):
+                        c.append('_'.join(['X', str(i), str(j)]))
+        return c
 
 
 
@@ -183,8 +232,7 @@ class Parameters_GaussMix(Parameters):
         if self.Ngauss > 1: self.pi = np.random.dirichlet(1 + self.nG)
     def update_X(self):
         B_Sinv = self.B[self.prange,:] * self.Sigma_inv # p*m
-        B_Sinv_B_j = np.zeros(self.p)
-        for j in range(self.p): B_Sinv_B_j[j] = np.dot(B_Sinv[j,:], self.B[self.pin+j,:])
+        B_Sinv_B_j = np.array([np.dot(B_Sinv[j,:], self.B[self.pin+j,:]) for j in range(self.p)])
         xi_hat = np.zeros(self.p)
         s2 = np.zeros(self.p)
         for i in range(self.n):
@@ -196,7 +244,8 @@ class Parameters_GaussMix(Parameters):
             zi_star[j] = self.xdata[i,j]
             mui_star = mui.copy() # p
             mui_star[j] = self.mu[self.G[i]][j,0]
-            inds = range(self.pin+self.p).pop(self.pin+j)
+            inds = range(self.pin+self.p)
+            inds.pop(self.pin+j)
             pred = self.X[i,inds] * self.B[inds,:] # 1*m
             xi_hat[j] = s2[j] * (np.dot(self.M_inv[i][j,:], zi_star) + np.dot(self.Tau_inv[self.G[i]][j,:], mui_star) + np.dot(B_Sinv[j,:], self.Y[i,:] - pred))
             # next covariate
@@ -213,9 +262,13 @@ class Parameters_GaussMix(Parameters):
     def update_mu(self):
         for k in range(self.Ngauss):
             nk = self.nG[k]
-            gg = np.where(self.G == k)[0]
-            S_mu = np.linalg.inv(self.U_inv + nk*self.Tau_inv[k])
-            mu_hat = S_mu * (self.U_inv * self.mu0 + nk * self.Tau_inv[k] * np.mean(self.X[np.ix_(gg, self.prange)], axis=0))
+            if nk == 0:
+                S_mu = self.U
+                mu_hat = self.mu0
+            else:
+                gg = np.where(self.G == k)[0]
+                S_mu = np.linalg.inv(self.U_inv + nk*self.Tau_inv[k])
+                mu_hat = S_mu * (self.U_inv * self.mu0 + nk * self.Tau_inv[k] * np.mean(self.X[np.ix_(gg, self.prange)], axis=0))
             self.mu[k] = np.matrix(np.random.multivariate_normal(np.array(mu_hat.T)[0,:], S_mu)).T
     def update_mu0(self):
         if self.Ngauss < 2:
@@ -249,14 +302,14 @@ class Parameters_GaussMix(Parameters):
         if fix.find('w') == -1: self.update_W()
     def _init_chain(self, chain, nmc, trace):
         Parameters._init_chain(self, chain, nmc, trace)
-        if trace.find('x') != -1: chain.X = np.empty((self.n, self.p, nmc)) * np.nan
-        if trace.find('t') != -1: chain.Tau = np.empty((self.Ngauss, self.p, self.p, nmc)) * np.nan
-        if trace.find('p') != -1: chain.pi = np.empty((self.Ngauss, nmc)) * np.nan
-        if trace.find('g') != -1: chain.G = np.empty((self.n, nmc)) * np.nan
-        if trace.find('m') != -1: chain.mu = np.empty((self.Ngauss, self.p, nmc)) * np.nan
-        if trace.find('z') != -1: chain.mu0 = np.empty((self.p, nmc)) * np.nan
-        if trace.find('u') != -1: chain.U = np.empty((self.p, self.p, nmc)) * np.nan
-        if trace.find('w') != -1: chain.W = np.empty((self.p, self.p, nmc)) * np.nan
+        if trace.find('x') != -1: chain.X = np.full((self.n, self.p, nmc), np.nan)
+        if trace.find('t') != -1: chain.Tau = np.full((self.Ngauss, self.p, self.p, nmc), np.nan)
+        if trace.find('p') != -1: chain.pi = np.full((self.Ngauss, nmc), np.nan)
+        if trace.find('g') != -1: chain.G = np.full((self.n, nmc), np.nan)
+        if trace.find('m') != -1: chain.mu = np.full((self.Ngauss, self.p, nmc), np.nan)
+        if trace.find('z') != -1: chain.mu0 = np.full((self.p, nmc), np.nan)
+        if trace.find('u') != -1: chain.U = np.full((self.p, self.p, nmc), np.nan)
+        if trace.find('w') != -1: chain.W = np.full((self.p, self.p, nmc), np.nan)
     def _store(self, chain, i):
         Parameters._store(self, chain, i)
         if chain.trace.find('x') != -1:
@@ -269,4 +322,38 @@ class Parameters_GaussMix(Parameters):
         if chain.trace.find('z') != -1: chain.mu0[:,i] = self.mu0
         if chain.trace.find('u') != -1: chain.U[:,:,i] = self.U
         if chain.trace.find('w') != -1: chain.W[:,:,i] = self.W
+    def _namecolumns(self, trace):
+        c = Parameters._namecolumns(self, trace)
+        for param in trace:
+            if param == 'X':
+                for i in range(self.n):
+                    for j in range(self.m):
+                        c.append('_'.join(['Y', str(i), str(j)]))
+            elif param == 'Tau':
+                for k in range(self.Ngauss):
+                    for i in range(self.p):
+                        for j in range(i+1):
+                            c.append('_'.join(['Tau', str(k), str(i), str(j)]))
+            elif param == 'pi':
+                for k in range(self.Ngauss):
+                    c.append('_'.join(['pi', str(k)]))
+            elif param == 'G':
+                for k in range(self.n):
+                    c.append('_'.join(['G', str(k)]))
+            elif param == 'mu':
+                for k in range(self.Ngauss):
+                    for j in range(self.p):
+                        c.append('_'.join(['mu', str(k), str(j)]))
+            elif param == 'mu0':
+                for k in range(self.p):
+                    c.append('_'.join(['mu0', str(k)]))
+            elif param == 'U':
+                for i in range(self.p):
+                    for j in range(i+1):
+                        c.append('_'.join(['U', str(i), str(j)]))
+            elif param == 'W':
+                for i in range(self.p):
+                    for j in range(i+1):
+                        c.append('_'.join(['W', str(i), str(j)]))
+        return c
 
