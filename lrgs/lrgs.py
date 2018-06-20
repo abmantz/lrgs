@@ -1,5 +1,4 @@
 import numpy as np
-import pandas
 import scipy.stats as st
 
 class Chain(dict):
@@ -19,8 +18,6 @@ class Chain(dict):
                 break
     def extract(self, field, *args):
         return self.__getattribute__(field).__getitem__(args)
-    def to_dataframe(self, trace):
-        return pandas.DataFrame(self.to_dict(trace))
     def to_dict(self, trace):
         cols = self.params._namecolumns(trace)
         f = {}
