@@ -44,6 +44,7 @@ class Chain(dict):
 class Parameters:
     def __init__(self, xdata, ydata, M=None, M_inv=None, intercept=True, Sigma_prior=None):
         # todo: infinitely many checks
+        # especially that things are/are not matrices
         self.n = ydata.shape[0]
         self.m = ydata.shape[1]
         if xdata is None:
@@ -63,11 +64,12 @@ class Parameters:
             self.Sigma_prior_scale = Sigma_prior[1]
         if M_inv is None:
             if M is None:
-                self.M_inv = [np.diag(np.ones(self.p+self.m)) for i in range(self.n)]
+                self.M_inv = [np.asmatrix(np.eye(self.p+self.m)) for i in range(self.n)]
             else:
                 self.M_inv = [np.linalg.inv(M[i]) for i in range(self.n)]
         else:
             self.M_inv = M_inv
+        self.M = M
         # set initial values
         if intercept:
             if self.p == 0:
@@ -79,7 +81,7 @@ class Parameters:
         self.Y = ydata.copy()
         self.B = np.matrix(np.zeros((self.p+self.pin,self.m)), copy=False) # (p+pin)*m
         if intercept: self.B[0,:] = np.mean(self.Y, axis=0)
-        self.Sigma = np.matrix(np.diag(np.var(self.Y, axis=0)), copy=False) # m*m
+        self.Sigma = np.matrix(np.diag(np.var(self.Y, axis=0)), copy=True) # m*m
         self.Sigma_inv = 1.0 / self.Sigma
     def update_Sigma(self):
         E = self.Y - self.X * self.B # n*m
@@ -107,22 +109,37 @@ class Parameters:
     def update_Y(self):
         pred = self.X * self.B # n*m
         q = pred - self.Y # n*m
-        eta_hat = np.zeros(self.m)
-        for i in range(self.n):
-            if self.p == 0:
-                zi = self.ydata[i,:] - self.Y[i,:] # p+m
-            else:
-                zi = np.concatenate((self.xdata[i,:], self.ydata[i,:])) - np.concatenate((self.X[i,self.prange], self.Y[i,:])) # NB skipping of intercept column in X, if any; p+m
-            s2 = 1.0/(self.M_inv[i].diagonal()[self.p+np.arange(self.m)] + self.Sigma_inv.diagonal()) # m
-            for j in range(self.m):
-                zi_star = zi.copy() # p+m
-                zi_star[self.p+j] = self.ydata[i,j]
-                qi_star = q[i,:] # m
-                qi_star[j] = pred[i,j]
-                eta_hat[j] = s2[j] * (np.dot(self.M_inv[i][self.p+j,:], zi_star) + np.dot(self.Sigma_inv[j,:], qi_star)) # scalar (index over m)
-                # next response j
-            self.Y[i,:] = np.random.normal(eta_hat, np.sqrt(s2))
-            # next data point
+        if self.p == 0:
+            zi = self.ydata - self.Y # n*(p+m)
+        else :
+            zi = np.concatenate((self.xdata-self.X[:,self.prange] , self.ydata-self.Y), axis=1) # NB skipping of intercept column in X, if any; n*(p+m)
+        eta_hat = np.ndarray((self.n, self.m)) # n*m
+        s2 = 1.0 / (np.array([np.asarray(self.M_inv[i]).diagonal()[self.p+np.arange(self.m)] for i in range(self.n)]) + np.outer(np.ones(self.n), np.asarray(self.Sigma_inv).diagonal())) # n*m
+        for j in range(self.m):
+            zi_star = zi.copy() # n*(p+m)
+            zi_star[:,self.p+j] = self.ydata[:,j]
+            qi_star = q.copy() # n*m
+            qi_star[:,j] = pred[:,j]
+            M_inv_rows = np.array([np.asarray(self.M_inv[i][self.p+j,:])[0] for i in range(self.n)])
+            S_inv_rows = np.outer(np.ones(self.n), np.asarray(self.Sigma_inv[j,:])[0])
+            eta_hat[:,j] = s2[:,j] * (np.sum(M_inv_rows*np.asarray(zi_star), axis=1) + np.sum(S_inv_rows*np.asarray(qi_star), axis=1))
+        self.Y = np.asmatrix(np.random.normal(eta_hat, np.sqrt(s2)))
+        # eta_hat = np.zeros(self.m)
+        # for i in range(self.n):
+        #     if self.p == 0:
+        #         zi = self.ydata[i,:] - self.Y[i,:] # p+m
+        #     else:
+        #         zi = np.concatenate((self.xdata[i,:], self.ydata[i,:])) - np.concatenate((self.X[i,self.prange], self.Y[i,:])) # NB skipping of intercept column in X, if any; p+m
+        #     s2 = 1.0/(self.M_inv[i].diagonal()[self.p+np.arange(self.m)] + self.Sigma_inv.diagonal()) # m
+        #     for j in range(self.m):
+        #         zi_star = zi.copy() # p+m
+        #         zi_star[self.p+j] = self.ydata[i,j]
+        #         qi_star = q[i,:] # m
+        #         qi_star[j] = pred[i,j]
+        #         eta_hat[j] = s2[j] * (np.dot(self.M_inv[i][self.p+j,:], zi_star) + np.dot(self.Sigma_inv[j,:], qi_star)) # scalar (index over m)
+        #         # next response j
+        #     self.Y[i,:] = np.random.normal(eta_hat, np.sqrt(s2))
+        #     # next data point
     def update(self, fix=''):
         if fix.find('s') == -1: self.update_Sigma()
         if fix.find('b') == -1: self.update_B()
@@ -158,22 +175,36 @@ class Parameters_Uniform(Parameters):
     def update_X(self):
         B_Sinv = self.B[self.prange,:] * self.Sigma_inv # p*m
         B_Sinv_B_j = np.zeros(self.p)
-        for j in range(self.p): B_Sinv_B_j[j] = np.dot(B_Sinv[j,:], self.B[self.pin+j,:])
-        xi_hat = np.zeros(self.p)
-        s2 = np.zeros(self.p)
-        for i in range(self.n):
-          zi = np.concatenate((self.xdata[i,:], self.ydata[i,:])) - np.concatenate((self.X[i,self.prange], self.Y[i,:])) # p+m
-          for j in range(self.p):
-            s2[j] = 1.0/(self.M_inv[i][j,j] + B_Sinv_B_j[j])
-            zi_star = zi.copy() # p+m
-            zi_star[j] = self.xdata[i,j]
+        for j in range(self.p):
+            B_Sinv_B_j[j] = np.dot(B_Sinv[j,:], self.B[self.pin+j,:])
+        zi = zi = np.concatenate((self.xdata-self.X[:,self.prange] , self.ydata-self.Y), axis=1) # NB skipping of intercept column in X, if any; n*(p+m)
+        s2 = 1.0 / (np.array([np.asarray(self.M_inv[i]).diagonal()[np.arange(self.p)] for i in range(self.n)]) + np.outer(np.ones(self.n), np.asarray(B_Sinv_B_j))) # n*p
+        xi_hat = np.ndarray((self.n,self.p))
+        for j in range(self.p):
+            zi_star = zi.copy() # n*(p+m)
+            zi_star[:,j] = self.xdata[:,j]
             inds = range(self.pin+self.p)
             inds.pop(self.pin+j)
-            pred = self.X[i,inds] * self.B[inds,:] # 1*m
-            xi_hat[j] = s2[j] * (np.dot(self.M_inv[i][j,:], zi_star) + np.dot(B_Sinv[j,:], self.Y[i,:] - pred))
-            # next covariate
-          self.X[i,self.prange] = np.random.normal(xi_hat, np.sqrt(s2))
-          # next data point
+            pred = np.array([np.asarray(self.X[i,inds] * self.B[inds,:])[0] for i in range(self.n)]) # n*m; not seeing a simple way to avoid the loop here...
+            M_inv_rows = np.array([np.asarray(self.M_inv[i][j,:])[0] for i in range(self.n)])
+            B_Sinv_rows = np.outer(np.ones(self.n), np.asarray(B_Sinv[j,:])[0])
+            xi_hat[:,j] = s2[:,j] * (np.sum(M_inv_rows*np.asarray(zi_star), axis=1) + np.sum(B_Sinv_rows*np.asarray(self.Y-pred), axis=1))
+        self.X[:,self.prange] = np.random.normal(xi_hat, np.sqrt(s2))
+        # xi_hat = np.zeros(self.p)
+        # s2 = np.zeros(self.p)
+        # for i in range(self.n):
+        #   zi = np.concatenate((self.xdata[i,:], self.ydata[i,:])) - np.concatenate((self.X[i,self.prange], self.Y[i,:])) # p+m
+        #   for j in range(self.p):
+        #     s2[j] = 1.0/(self.M_inv[i][j,j] + B_Sinv_B_j[j])
+        #     zi_star = zi.copy() # p+m
+        #     zi_star[j] = self.xdata[i,j]
+        #     inds = range(self.pin+self.p)
+        #     inds.pop(self.pin+j)
+        #     pred = self.X[i,inds] * self.B[inds,:] # 1*m
+        #     xi_hat[j] = s2[j] * (np.dot(self.M_inv[i][j,:], zi_star) + np.dot(B_Sinv[j,:], self.Y[i,:] - pred))
+        #     # next covariate
+        #   self.X[i,self.prange] = np.random.normal(xi_hat, np.sqrt(s2))
+        #   # next data point
     def update(self, fix=''):
         Parameters.update(self, fix)
         if fix.find('x') == -1: self.update_X()
@@ -230,24 +261,41 @@ class Parameters_GaussMix(Parameters):
     def update_X(self):
         B_Sinv = self.B[self.prange,:] * self.Sigma_inv # p*m
         B_Sinv_B_j = np.array([np.dot(B_Sinv[j,:], self.B[self.pin+j,:]) for j in range(self.p)])
-        xi_hat = np.zeros(self.p)
-        s2 = np.zeros(self.p)
-        for i in range(self.n):
-          zi = np.concatenate((self.xdata[i,:], self.ydata[i,:])) - np.concatenate((self.X[i,self.prange], self.Y[i,:])) # p+m
-          mui = self.mu[self.G[i]].T - self.X[i,self.prange] # p
-          for j in range(self.p):
-            s2[j] = 1.0/(self.M_inv[i][j,j] + self.Tau_inv[self.G[i]][j,j] + B_Sinv_B_j[j])
-            zi_star = zi.copy() # p+m
-            zi_star[j] = self.xdata[i,j]
-            mui_star = mui.copy() # p
-            mui_star[j] = self.mu[self.G[i]][j,0]
+        zi = zi = np.concatenate((self.xdata-self.X[:,self.prange] , self.ydata-self.Y), axis=1) # NB skipping of intercept column in X, if any; n*(p+m)
+        mui = np.array([np.asarray(self.mu[self.G[i]].T)[0] for i in range(self.n)]) - self.X[i,self.prange] # n*p
+        s2 = 1.0 / (np.array([np.asarray(self.M_inv[i]).diagonal()[np.arange(self.p)] for i in range(self.n)]) + np.outer(np.ones(self.n), np.asarray(B_Sinv_B_j))) # n*p
+        xi_hat = np.ndarray((self.n,self.p))
+        for j in range(self.p):
+            zi_star = zi.copy() # n*(p+m)
+            zi_star[:,j] = self.xdata[:,j]
+            mui_star = mui.copy() # n*p
+            mui_star[:,j] = np.array([[self.mu[self.G[i]][j,0]] for i in range(self.n)])
             inds = range(self.pin+self.p)
             inds.pop(self.pin+j)
-            pred = self.X[i,inds] * self.B[inds,:] # 1*m
-            xi_hat[j] = s2[j] * (np.dot(self.M_inv[i][j,:], zi_star) + np.dot(self.Tau_inv[self.G[i]][j,:], mui_star) + np.dot(B_Sinv[j,:], self.Y[i,:] - pred))
-            # next covariate
-          self.X[i,self.prange] = np.random.normal(xi_hat, np.sqrt(s2))
-          # next data point
+            pred = np.array([np.asarray(self.X[i,inds] * self.B[inds,:])[0] for i in range(self.n)]) # n*m; not seeing a simple way to avoid the loop here...
+            M_inv_rows = np.array([np.asarray(self.M_inv[i][j,:])[0] for i in range(self.n)])
+            Tau_inv_rows = np.array([np.asarray(self.Tau_inv[self.G[i]][j,:])[0] for i in range(self.n)])
+            B_Sinv_rows = np.outer(np.ones(self.n), np.asarray(B_Sinv[j,:])[0])
+            xi_hat[:,j] = s2[:,j] * (np.sum(M_inv_rows*np.asarray(zi_star), axis=1) + np.sum(Tau_inv_rows*np.asarray(mui_star), axis=1) + np.sum(B_Sinv_rows*np.asarray(self.Y-pred), axis=1))
+        self.X[:,self.prange] = np.random.normal(xi_hat, np.sqrt(s2))
+        # xi_hat = np.zeros(self.p)
+        # s2 = np.zeros(self.p)
+        # for i in range(self.n):
+        #   zi = np.concatenate((self.xdata[i,:], self.ydata[i,:])) - np.concatenate((self.X[i,self.prange], self.Y[i,:])) # p+m
+        #   mui = self.mu[self.G[i]].T - self.X[i,self.prange] # p
+        #   for j in range(self.p):
+        #     s2[j] = 1.0/(self.M_inv[i][j,j] + self.Tau_inv[self.G[i]][j,j] + B_Sinv_B_j[j])
+        #     zi_star = zi.copy() # p+m
+        #     zi_star[j] = self.xdata[i,j]
+        #     mui_star = mui.copy() # p
+        #     mui_star[j] = self.mu[self.G[i]][j,0]
+        #     inds = range(self.pin+self.p)
+        #     inds.pop(self.pin+j)
+        #     pred = self.X[i,inds] * self.B[inds,:] # 1*m
+        #     xi_hat[j] = s2[j] * (np.dot(self.M_inv[i][j,:], zi_star) + np.dot(self.Tau_inv[self.G[i]][j,:], mui_star) + np.dot(B_Sinv[j,:], self.Y[i,:] - pred))
+        #     # next covariate
+        #   self.X[i,self.prange] = np.random.normal(xi_hat, np.sqrt(s2))
+        #   # next data point
     def update_G(self):
         if self.Ngauss < 2:
             return
