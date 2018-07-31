@@ -26,7 +26,7 @@ Gaussian mixture           |  Dirichlet process
 ![Mixture model](./pgm_mix.png) | ![Dirichlet process model](./pgm_dp.png)
 
 ## Example usage (R)
-These examples appear in the R documentation for the Gibbs.regression function. Each one creates a mock data set and then fits a linear model to it, and compares the results to traditional regression. You can see the results, including plots, in [this ipython notebook](./Gibbs_regression_example.ipynb).
+These examples appear in the R documentation for the Gibbs.regression function. Each one creates a mock data set and then fits a linear model to it, and compares the results to traditional regression. You can see the results, including plots, in [this ipython notebook](notebooks/example_R.ipynb).
 
 ```R
 ## example using the default Ngauss=1 with no measurement errors
@@ -59,3 +59,6 @@ plot(post$mu[1,1,-1], col=4); abline(h=mean(xx), lty=2, col=2)
 plot(post$Tau[1,1,1,-1], col=4); abline(h=var(xx), lty=2, col=2)
 plot(post$alpha[-1], col=4)
 ```
+
+## Example usage (Python)
+[This notebook](notebooks/example_python.ipynb) illustrates how the Python version is used, emphasizing the differences in the interface.
