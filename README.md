@@ -11,11 +11,10 @@ Kelly (2007, hereafter K07) described an efficient algorithm, using Gibbs sampli
 For questions, comments, requests, problems, etc. use the [issues](https://github.com/abmantz/lrgs/issues).
 
 LRGS is implemented in [R](https://www.r-project.org/), and a port to Python is in development.
-can be obtained from [CRAN](https://cran.r-project.org/package=lrgs), although the version hosted there may lag behind this one (see [VERSION.md](VERSION.md)).
 
 Language | Branch | Note
 ---------- | -------- | ------
-R | [`R`](https://github.com/abmantz/lrgs/tree/R) | [On CRAN](https://cran.r-project.org/package=lrgs) (though not always the most recent version)
+R | [`R`](https://github.com/abmantz/lrgs/tree/R) | [On CRAN](https://cran.r-project.org/package=lrgs) (though not always the most recent [version](https://github.com/abmantz/lrgs/tree/R/VERSION.md))
 Python | [`python`](https://github.com/abmantz/lrgs/tree/python) | In alpha
 
 ## Graphical Model Representations
