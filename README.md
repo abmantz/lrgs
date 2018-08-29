@@ -1,3 +1,6 @@
+This branch is currently a sandbox for implementing the model used by LRGS in [`Stan`](http://mc-stan.org), a Hamiltonian Monte Carlo sampler, to see how it compares to the conjugate Gibbs sampling implemented in [`R`](https://github.com/abmantz/lrgs/tree/R) and [`python`](https://github.com/abmantz/lrgs/tree/python).
+
+
 <a href="http://ascl.net/1602.005"><img src="https://img.shields.io/badge/ascl-1602.005-blue.svg?colorB=262255" alt="ascl:1602.005" /></a>
 
 # LRGS: Linear Regression by Gibbs Sampling
@@ -8,4 +11,4 @@ Kelly (2007, hereafter K07) described an efficient algorithm, using Gibbs sampli
 
 For questions, comments, requests, problems, etc. use the [issues](https://github.com/abmantz/lrgs/issues).
 
-LRGS for Python is currently in alpha. It has not been fully vetted, and some features of the R version are not implemented (see [VERSION.md](VERSION.md)).
+LRGS for Stan does not exist! We're just playing. (Yet there is still a [VERSION.md](VERSION.md).)
