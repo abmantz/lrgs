@@ -1,5 +1,9 @@
 This branch is currently a sandbox for implementing the model used by LRGS in [`Stan`](http://mc-stan.org), a Hamiltonian Monte Carlo sampler, to see how it compares to the conjugate Gibbs sampling implemented in [`R`](https://github.com/abmantz/lrgs/tree/R) and [`python`](https://github.com/abmantz/lrgs/tree/python).
 
+References:
+* [K07](https://arxiv.org/abs/0705.2774) especially sections 4 and 6
+* [M16](https://arxiv.org/abs/1509.00908) sections 2-3
+
 
 <a href="http://ascl.net/1602.005"><img src="https://img.shields.io/badge/ascl-1602.005-blue.svg?colorB=262255" alt="ascl:1602.005" /></a>
 
