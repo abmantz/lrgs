@@ -3,6 +3,7 @@ This branch is currently a sandbox for implementing the model used by LRGS in [`
 References:
 * [K07](https://arxiv.org/abs/0705.2774) especially sections 4 and 6
 * [M16](https://arxiv.org/abs/1509.00908) sections 2-3
+* [This PGM](https://github.com/abmantz/lrgs/blob/master/pgm_mix.png)
 
 ### What are we doing here?
 
