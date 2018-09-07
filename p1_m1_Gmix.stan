@@ -20,18 +20,20 @@ parameters {
     real<lower=0> Sigma;
     simplex[Ngauss] pi;
     real mu[Ngauss];
-    real<lower=0> Tau[Ngauss];
+    vector<lower=0> [Ngauss] Tau;
     real mu0;
     real<lower=0> U;
     real<lower=0> W;
 }
 model {
+    vector [Ngauss] log_sqrt_Tau = 0.5 * log(Tau);
+    vector [Ngauss] log_pi = log(pi);
     target += (pi_conc - 1) * sum(log(pi));  
     target += -log(Sigma);
     for (i in 1:n) {
         real lps[Ngauss];
         for (k in 1:Ngauss) {
-          lps[k] = log(pi[k]) + normal_lpdf(xi[i] | mu[k], sqrt(Tau[k]));
+          lps[k] = log_pi[k] - 0.5 * square(xi[i] - mu[k]) / Tau[k] - log_sqrt_Tau[k];
         }
         target += log_sum_exp(lps);
     }
