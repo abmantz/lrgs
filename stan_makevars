@@ -1,0 +1,7 @@
+#CFLAGS =              -O0 -pipe  -std=gnu99 
+#CXXFLAGS =            -O0 -pipe -Wno-unused
+
+CFLAGS =              -O2 -pipe  -std=gnu99 
+CXXFLAGS =            -O2 -pipe -Wno-unused -DEIGEN_NO_DEBUG -DBOOST_RESULT_OF_USE_TR1 -DBOOST_NO_DECLTYPE -DBOOST_DISABLE_ASSERTS -DFUSION_MAX_VECTOR_SIZE=12 -DNO_FPRINTF_OUTPUT -std=c++17 
+
+CXX=g++

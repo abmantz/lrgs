@@ -5,6 +5,9 @@ data {
     vector[n] y;
     matrix[2,2] M[n];
 }
+transformed data{
+    int p = 1; // number of covariates
+}
 parameters {
     vector[n] xi;
     vector[n] eta;
@@ -22,7 +25,7 @@ model {
     vector[Ngauss] pi_conc;
     for (k in 1:Ngauss) pi_conc[k] = 1.0;
     pi ~ dirichlet(pi_conc);
-    Sigma ~ inv_gamma(1e-3, 1e-3);
+    target += -log(Sigma);
     for (i in 1:n) {
         real lps[Ngauss];
         for (k in 1:Ngauss) {
@@ -33,9 +36,9 @@ model {
     eta ~ normal(alpha+beta*x, sqrt(Sigma));
     for (k in 1:Ngauss) {
         mu[k] ~ normal(mu0, sqrt(U));
-        Tau ~ scaled_inv_chi_square(1, sqrt(W));
     }
-    U ~ scaled_inv_chi_square(1, sqrt(W));
+    Tau ~ gamma((Ngauss + p)/2.0,1/(2*W));
+    U ~ gamma((Ngauss + p)/2.0 ,1/(2*W));
     for (i in 1:n) {
         vector[2] xy;
         vector[2] xieta;
