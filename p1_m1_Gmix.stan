@@ -6,7 +6,7 @@ data {
     matrix[2,2] M[n];
 }
 transformed data{
-    int p = 0; // number of covariates
+    int p = 1; // number of covariates
 }
 parameters {
     vector[n] xi;
