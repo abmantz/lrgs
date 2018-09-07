@@ -37,7 +37,7 @@ model {
         target += log_sum_exp(lps);
     }
     eta ~ normal(alpha+beta*x, sqrt(Sigma));
-    target += -0.5*(sum(square(mu)) - square(sum(mu))/Ngauss)/W - 0.5*log(W);  
+    target += -0.5*(sum(square(mu)) - square(sum(mu))/Ngauss)/W - 0.5*log(W)*Ngauss;
     Tau ~ inv_gamma((Ngauss + p)/2.0,1/(2*W));
     U ~ inv_gamma((Ngauss + p)/2.0 ,1/(2*W));
     for (i in 1:n) {
