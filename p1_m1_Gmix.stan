@@ -38,8 +38,8 @@ model {
     }
     eta ~ normal(alpha+beta*x, sqrt(Sigma));
     target += -0.5*(sum(square(mu)) - square(sum(mu))/Ngauss)/W - 0.5*log(W);  
-    Tau ~ gamma((Ngauss + p)/2.0,1/(2*W));
-    U ~ gamma((Ngauss + p)/2.0 ,1/(2*W));
+    Tau ~ inv_gamma((Ngauss + p)/2.0,1/(2*W));
+    U ~ inv_gamma((Ngauss + p)/2.0 ,1/(2*W));
     for (i in 1:n) {
         vector[2] xy = [x[i], y[i]]';
         vector[2] xieta = [xi[i], eta[i]]';
