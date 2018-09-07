@@ -19,9 +19,8 @@ parameters {
     real beta;
     real<lower=0> Sigma;
     simplex[Ngauss] pi;
-    real mu[Ngauss];
+    ordered [Ngauss] mu;
     vector<lower=0> [Ngauss] Tau;
-    real mu0;
     real<lower=0> U;
     real<lower=0> W;
 }
@@ -38,7 +37,7 @@ model {
         target += log_sum_exp(lps);
     }
     eta ~ normal(alpha+beta*x, sqrt(Sigma));
-    mu ~ normal(mu0, sqrt(U));  
+    target += -0.5*(sum(square(mu)) - square(sum(mu))/Ngauss)/W - 0.5*log(W);  
     Tau ~ gamma((Ngauss + p)/2.0,1/(2*W));
     U ~ gamma((Ngauss + p)/2.0 ,1/(2*W));
     for (i in 1:n) {
@@ -46,4 +45,7 @@ model {
         vector[2] xieta = [xi[i], eta[i]]';
         xy ~ multi_normal_prec(xieta, M_inv[i]);
      }
+}
+generated quantities{
+  real mu0 = normal_rng(mean(mu),sqrt(U/Ngauss));
 }
