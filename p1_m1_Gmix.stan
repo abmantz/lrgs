@@ -42,12 +42,8 @@ model {
     Tau ~ gamma((Ngauss + p)/2.0,1/(2*W));
     U ~ gamma((Ngauss + p)/2.0 ,1/(2*W));
     for (i in 1:n) {
-        vector[2] xy;
-        vector[2] xieta;
-        xy[1] = x[i];
-        xy[2] = y[i];
-        xieta[1] = xi[i];
-        xieta[2] = eta[i];
+        vector[2] xy = [x[i], y[i]]';
+        vector[2] xieta = [xi[i], eta[i]]';
         xy ~ multi_normal_prec(xieta, M_inv[i]);
      }
 }
