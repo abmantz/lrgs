@@ -37,8 +37,8 @@ model {
     for (k in 1:Ngauss) {
         mu[k] ~ normal(mu0, sqrt(U));
     }
-    Tau ~ gamma((Ngauss + p)/2.0,1/(2*W));
-    U ~ gamma((Ngauss + p)/2.0 ,1/(2*W));
+    Tau ~ inv_gamma((Ngauss + p)/2.0,1/(2*W));
+    U ~ inv_gamma((Ngauss + p)/2.0 ,1/(2*W));
     for (i in 1:n) {
         vector[2] xy;
         vector[2] xieta;
