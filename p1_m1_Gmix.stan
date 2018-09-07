@@ -7,6 +7,10 @@ data {
 }
 transformed data{
     int p = 1; // number of covariates
+    real pi_conc = 1.0;
+    matrix[2,2] M_inv[n];
+    for(i in 1:n)
+      M_inv[i] = inverse(M[i]);
 }
 parameters {
     vector[n] xi;
@@ -22,9 +26,7 @@ parameters {
     real<lower=0> W;
 }
 model {
-    vector[Ngauss] pi_conc;
-    for (k in 1:Ngauss) pi_conc[k] = 1.0;
-    pi ~ dirichlet(pi_conc);
+    target += (pi_conc - 1) * sum(log(pi));  
     target += -log(Sigma);
     for (i in 1:n) {
         real lps[Ngauss];
@@ -34,9 +36,7 @@ model {
         target += log_sum_exp(lps);
     }
     eta ~ normal(alpha+beta*x, sqrt(Sigma));
-    for (k in 1:Ngauss) {
-        mu[k] ~ normal(mu0, sqrt(U));
-    }
+    mu ~ normal(mu0, sqrt(U));  
     Tau ~ gamma((Ngauss + p)/2.0,1/(2*W));
     U ~ gamma((Ngauss + p)/2.0 ,1/(2*W));
     for (i in 1:n) {
@@ -46,6 +46,6 @@ model {
         xy[2] = y[i];
         xieta[1] = xi[i];
         xieta[2] = eta[i];
-        xy ~ multi_normal(xieta, M[i]);
-    }
+        xy ~ multi_normal_prec(xieta, M_inv[i]);
+     }
 }
