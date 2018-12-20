@@ -1,5 +1,6 @@
 <a href="http://ascl.net/1602.005"><img src="https://img.shields.io/badge/ascl-1602.005-blue.svg?colorB=262255" alt="ascl:1602.005" /></a>
 <a href="https://cran.r-project.org/package=lrgs"><img src="https://img.shields.io/cran/v/lrgs.svg" alt="CRAN" /></a>
+<a href="https://pypi.python.org/pypi/lrgs"><img src="https://img.shields.io/pypi/v/lrgs.svg" alt="PyPI" /></a>
 <a href="https://raw.githubusercontent.com/abmantz/lrgs/master/LICENSE"><img src="https://img.shields.io/cran/l/lrgs.svg" alt="MIT License" /></a>
 
 # LRGS: Linear Regression by Gibbs Sampling
@@ -15,7 +16,7 @@ LRGS is implemented in [R](https://www.r-project.org/), and a port to Python is 
 Language | Branch | Note
 ---------- | -------- | ------
 R | [`R`](https://github.com/abmantz/lrgs/tree/R) | [On CRAN](https://cran.r-project.org/package=lrgs) (though not always the most recent [version](https://github.com/abmantz/lrgs/tree/R/VERSION.md))
-Python | [`python`](https://github.com/abmantz/lrgs/tree/python) | In alpha
+Python | [`python`](https://github.com/abmantz/lrgs/tree/python) | [On PyPI](https://pypi.python.org/pypi/lrgs) (though not always the most recent [version](https://github.com/abmantz/lrgs/tree/python/VERSION.md))
 
 ## Graphical Model Representations
 Just for fun, here are graphical representations of the implemented models. They differ only in the hierarchical structure of the covariate prior distribution. In this representation, random variables are circled, measured quantities are double-circled, and fixed quantities are shown as points.
