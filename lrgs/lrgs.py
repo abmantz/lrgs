@@ -7,10 +7,12 @@ class Chain(dict):
         self.params = params
         self.nmc = nmc
         self.trace = trace
-    def run(self, fix='', mention_every=None):
+    def run(self, fix='', mention_every=None, bonus=None):
         for i in range(self.nmc):
             try:
                 self.params.update(fix)
+                if bonus is not None:
+                    bonus(self)
                 self.params._store(self, i)
                 if mention_every is not None and (i+1) % mention_every == 0:
                     print 'Done with Gibbs iteration', i+1
@@ -82,7 +84,7 @@ class Parameters:
         self.B = np.matrix(np.zeros((self.p+self.pin,self.m)), copy=False) # (p+pin)*m
         if intercept: self.B[0,:] = np.mean(self.Y, axis=0)
         self.Sigma = np.matrix(np.diag(np.var(self.Y, axis=0)), copy=True) # m*m
-        self.Sigma_inv = 1.0 / self.Sigma
+        self.Sigma_inv = np.matrix(np.diag(1.0/np.diag(self.Sigma)))
     def update_Sigma(self):
         E = self.Y - self.X * self.B # n*m
         self.Sigma_inv = st.wishart.rvs(self.n + self.Sigma_prior_dof, np.linalg.inv(E.T*E + self.Sigma_prior_scale))
@@ -117,10 +119,10 @@ class Parameters:
         s2 = 1.0 / (np.array([np.asarray(self.M_inv[i]).diagonal()[self.p+np.arange(self.m)] for i in range(self.n)]) + np.outer(np.ones(self.n), np.asarray(self.Sigma_inv).diagonal())) # n*m
         for j in range(self.m):
             zi_star = zi.copy() # n*(p+m)
-            zi_star[:,self.p+j] = self.ydata[:,j]
+            zi_star[:,self.p+j] = np.asmatrix(self.ydata[:,j]).T
             qi_star = q.copy() # n*m
             qi_star[:,j] = pred[:,j]
-            M_inv_rows = np.array([np.asarray(self.M_inv[i][self.p+j,:])[0] for i in range(self.n)])
+            M_inv_rows = np.array([np.asarray(self.M_inv[i][self.p+j,:]) for i in range(self.n)])
             S_inv_rows = np.outer(np.ones(self.n), np.asarray(self.Sigma_inv[j,:])[0])
             eta_hat[:,j] = s2[:,j] * (np.sum(M_inv_rows*np.asarray(zi_star), axis=1) + np.sum(S_inv_rows*np.asarray(qi_star), axis=1))
         self.Y = np.asmatrix(np.random.normal(eta_hat, np.sqrt(s2)))
@@ -176,17 +178,17 @@ class Parameters_Uniform(Parameters):
         B_Sinv = self.B[self.prange,:] * self.Sigma_inv # p*m
         B_Sinv_B_j = np.zeros(self.p)
         for j in range(self.p):
-            B_Sinv_B_j[j] = np.dot(B_Sinv[j,:], self.B[self.pin+j,:])
+            B_Sinv_B_j[j] = np.dot(B_Sinv[j,:], self.B[self.pin+j,:].T)
         zi = zi = np.concatenate((self.xdata-self.X[:,self.prange] , self.ydata-self.Y), axis=1) # NB skipping of intercept column in X, if any; n*(p+m)
         s2 = 1.0 / (np.array([np.asarray(self.M_inv[i]).diagonal()[np.arange(self.p)] for i in range(self.n)]) + np.outer(np.ones(self.n), np.asarray(B_Sinv_B_j))) # n*p
         xi_hat = np.ndarray((self.n,self.p))
         for j in range(self.p):
             zi_star = zi.copy() # n*(p+m)
-            zi_star[:,j] = self.xdata[:,j]
+            zi_star[:,j] = np.asmatrix(self.xdata[:,j]).T
             inds = range(self.pin+self.p)
             inds.pop(self.pin+j)
             pred = np.array([np.asarray(self.X[i,inds] * self.B[inds,:])[0] for i in range(self.n)]) # n*m; not seeing a simple way to avoid the loop here...
-            M_inv_rows = np.array([np.asarray(self.M_inv[i][j,:])[0] for i in range(self.n)])
+            M_inv_rows = np.array([np.asarray(self.M_inv[i][j,:]) for i in range(self.n)])
             B_Sinv_rows = np.outer(np.ones(self.n), np.asarray(B_Sinv[j,:])[0])
             xi_hat[:,j] = s2[:,j] * (np.sum(M_inv_rows*np.asarray(zi_star), axis=1) + np.sum(B_Sinv_rows*np.asarray(self.Y-pred), axis=1))
         self.X[:,self.prange] = np.random.normal(xi_hat, np.sqrt(s2))
@@ -221,7 +223,7 @@ class Parameters_Uniform(Parameters):
         for param in trace:
             if param == 'X':
                 for i in range(self.n):
-                    for j in range(self.m):
+                    for j in range(self.p):
                         c.append('_'.join(['X', str(i), str(j)]))
         return c
 
@@ -235,7 +237,7 @@ class Parameters_GaussMix(Parameters):
         self.G = np.random.choice(range(Ngauss), self.n) # n
         self.nG = np.array([len(np.where(self.G == k)[0]) for k in range(Ngauss)]) # Ngauss
         self.pi = (1.0*self.nG) / self.n # Ngauss
-        self.mu0 = np.mean(self.xdata, axis=0).T # p
+        self.mu0 = np.asmatrix(np.mean(self.xdata, axis=0)).T # p
         self.U = np.matrix(np.diag(np.var(self.xdata, axis=0)), copy=False) # p*p
         self.U_inv = np.linalg.inv(self.U)
         self.mu = [np.matrix(np.random.multivariate_normal(np.array(self.mu0)[:,0], self.U)).T for k in range(Ngauss)] # Ngauss of p
@@ -260,20 +262,20 @@ class Parameters_GaussMix(Parameters):
         if self.Ngauss > 1: self.pi = np.random.dirichlet(1 + self.nG)
     def update_X(self):
         B_Sinv = self.B[self.prange,:] * self.Sigma_inv # p*m
-        B_Sinv_B_j = np.array([np.dot(B_Sinv[j,:], self.B[self.pin+j,:]) for j in range(self.p)])
+        B_Sinv_B_j = np.array([np.dot(B_Sinv[j,:], self.B[self.pin+j,:].T) for j in range(self.p)])
         zi = zi = np.concatenate((self.xdata-self.X[:,self.prange] , self.ydata-self.Y), axis=1) # NB skipping of intercept column in X, if any; n*(p+m)
         mui = np.array([np.asarray(self.mu[self.G[i]].T)[0] for i in range(self.n)]) - self.X[i,self.prange] # n*p
         s2 = 1.0 / (np.array([np.asarray(self.M_inv[i]).diagonal()[np.arange(self.p)] for i in range(self.n)]) + np.outer(np.ones(self.n), np.asarray(B_Sinv_B_j))) # n*p
         xi_hat = np.ndarray((self.n,self.p))
         for j in range(self.p):
             zi_star = zi.copy() # n*(p+m)
-            zi_star[:,j] = self.xdata[:,j]
+            zi_star[:,j] = np.asmatrix(self.xdata[:,j]).T
             mui_star = mui.copy() # n*p
             mui_star[:,j] = np.array([[self.mu[self.G[i]][j,0]] for i in range(self.n)])
             inds = range(self.pin+self.p)
             inds.pop(self.pin+j)
             pred = np.array([np.asarray(self.X[i,inds] * self.B[inds,:])[0] for i in range(self.n)]) # n*m; not seeing a simple way to avoid the loop here...
-            M_inv_rows = np.array([np.asarray(self.M_inv[i][j,:])[0] for i in range(self.n)])
+            M_inv_rows = np.array([np.asarray(self.M_inv[i][j,:]) for i in range(self.n)])
             Tau_inv_rows = np.array([np.asarray(self.Tau_inv[self.G[i]][j,:])[0] for i in range(self.n)])
             B_Sinv_rows = np.outer(np.ones(self.n), np.asarray(B_Sinv[j,:])[0])
             xi_hat[:,j] = s2[:,j] * (np.sum(M_inv_rows*np.asarray(zi_star), axis=1) + np.sum(Tau_inv_rows*np.asarray(mui_star), axis=1) + np.sum(B_Sinv_rows*np.asarray(self.Y-pred), axis=1))
@@ -372,8 +374,8 @@ class Parameters_GaussMix(Parameters):
         for param in trace:
             if param == 'X':
                 for i in range(self.n):
-                    for j in range(self.m):
-                        c.append('_'.join(['Y', str(i), str(j)]))
+                    for j in range(self.p):
+                        c.append('_'.join(['X', str(i), str(j)]))
             elif param == 'Tau':
                 for k in range(self.Ngauss):
                     for i in range(self.p):
@@ -402,3 +404,89 @@ class Parameters_GaussMix(Parameters):
                         c.append('_'.join(['W', str(i), str(j)]))
         return c
 
+
+    # partial implementation - no hyperprior or updating for rates
+# lots of redundant code here compared with GaussMix
+class Parameters_ExpMix(Parameters):
+    def __init__(self, Nexp, *args, **kwargs):
+        Parameters.__init__(self, *args, **kwargs)
+        self.Nexp = Nexp
+        # set initial values
+        self.G = np.random.choice(range(Nexp), self.n) # n
+        self.nG = np.array([len(np.where(self.G == k)[0]) for k in range(Nexp)]) # Nexp
+        self.pi = (1.0*self.nG) / self.n # Nexp
+        self.rate =  [np.ones(self.p) for k in range(Nexp)] # Nexp*p  -- todo: improve
+    def update_pi(self):
+        if self.Nexp > 1: self.pi = np.random.dirichlet(1 + self.nG)
+    def update_X(self):
+        B_Sinv = self.B[self.prange,:] * self.Sigma_inv # p*m
+        B_Sinv_B_j = np.array([np.dot(B_Sinv[j,:], self.B[self.pin+j,:].T) for j in range(self.p)])
+        zi = zi = np.concatenate((self.xdata-self.X[:,self.prange] , self.ydata-self.Y), axis=1) # NB skipping of intercept column in X, if any; n*(p+m)
+        ratei = np.array([self.rate[self.G[i]] for i in range(self.n)]) # n*p
+        s2 = 1.0 / (np.array([np.asarray(self.M_inv[i]).diagonal()[np.arange(self.p)] for i in range(self.n)]) + np.outer(np.ones(self.n), np.asarray(B_Sinv_B_j))) # n*p
+        xi_hat = np.ndarray((self.n,self.p))
+        for j in range(self.p):
+            zi_star = zi.copy() # n*(p+m)
+            zi_star[:,j] = np.asmatrix(self.xdata[:,j]).T
+            inds = range(self.pin+self.p)
+            inds.pop(self.pin+j)
+            pred = np.array([np.asarray(self.X[i,inds] * self.B[inds,:])[0] for i in range(self.n)]) # n*m; not seeing a simple way to avoid the loop here...
+            M_inv_rows = np.array([np.asarray(self.M_inv[i][j,:]) for i in range(self.n)])
+            B_Sinv_rows = np.outer(np.ones(self.n), np.asarray(B_Sinv[j,:])[0])
+            xi_hat[:,j] = s2[:,j] * (np.sum(M_inv_rows*np.asarray(zi_star), axis=1) - ratei[:,j] + np.sum(B_Sinv_rows*np.asarray(self.Y-pred), axis=1))
+        #self.X[:,self.prange] = np.random.normal(xi_hat, np.sqrt(s2))
+        newX = np.random.normal(xi_hat, np.sqrt(s2))
+        while True: # danger of neverending loop!
+            i = np.where(newX < 0.0)
+            if len(i[0]) == 0:
+                break
+            newX[i] = np.random.normal(xi_hat[i], np.sqrt(s2[i]))
+        self.X[:,self.prange] = newX
+    def update_G(self):
+        if self.Nexp < 2:
+            return
+        for i in range(self.n):
+            q = np.array([self.pi[k] * st.expon.pdf(self.X[i,self.prange], scale=1.0/self.rate[k]) for k in range(self.Nexp)])
+            q /= np.sum(q)
+            self.G[i] = np.where(np.random.multinomial(1, q) == 1)[0][0]
+        self.nG = np.array([len(np.where(self.G == k)[0]) for k in range(self.Nexp)])
+    def update_rate(self):
+        raise Exception('update_rate not written')
+    def update(self, fix=''):
+        Parameters.update(self, fix)
+        if fix.find('p') == -1: self.update_pi()
+        if fix.find('x') == -1: self.update_X()
+        if fix.find('g') == -1: self.update_G()
+        #if fix.find('l') == -1: self.update_rate()
+    def _init_chain(self, chain, nmc, trace):
+        Parameters._init_chain(self, chain, nmc, trace)
+        if trace.find('x') != -1: chain.X = np.full((self.n, self.p, nmc), np.nan)
+        if trace.find('p') != -1: chain.pi = np.full((self.Nexp, nmc), np.nan)
+        if trace.find('g') != -1: chain.G = np.full((self.n, nmc), np.nan)
+        if trace.find('l') != -1: chain.rate = np.full((self.Nexp, self.p, nmc), np.nan)
+    def _store(self, chain, i):
+        Parameters._store(self, chain, i)
+        if chain.trace.find('x') != -1:
+            if self.pin == 1: chain.X[:,:,i] = self.X[:,-1]
+            else: chain.X[:,:,i] = self.X
+        if chain.trace.find('p') != -1: chain.pi[:,i] = self.pi
+        if chain.trace.find('g') != -1: chain.G[:,i] = self.G
+        if chain.trace.find('l') != -1: chain.rate[:,:,i] = np.array([self.rate[k] for k in range(self.Nexp)])
+    def _namecolumns(self, trace):
+        c = Parameters._namecolumns(self, trace)
+        for param in trace:
+            if param == 'X':
+                for i in range(self.n):
+                    for j in range(self.p):
+                        c.append('_'.join(['X', str(i), str(j)]))
+            elif param == 'pi':
+                for k in range(self.Nexp):
+                    c.append('_'.join(['pi', str(k)]))
+            elif param == 'G':
+                for k in range(self.n):
+                    c.append('_'.join(['G', str(k)]))
+            elif param == 'rate':
+                for k in range(self.Nexp):
+                    for j in range(self.p):
+                        c.append('_'.join(['rate', str(k), str(j)]))
+        return c
