@@ -20,7 +20,11 @@ For questions, comments, requests, problems, etc. use the `GitHub issues <https:
 
 Status
 ======
-LRGS for Python is currently in alpha. It has not been fully vetted, and some features of the R version are not implemented (see `VERSION.md <https://github.com/abmantz/lrgs/blob/python/VERSION.md>`_).
+LRGS for Python is currently in alpha. It has not been vetted for all possible combinations of univariate/multivariate covariates and responses. Some features of the R version are not implemented, in particular the Dirichlet process prior.
+
+A submodule, ``lrgs.trunc``, has been added to facilitate modeling of truncated data sets (see `this paper <link TBD>`_). This submodule depends on the external package `LMC <https://github.com/abmantz/lmc>`_. It has no analog in the R version of LRGS.
+
+See `VERSION.md <https://github.com/abmantz/lrgs/blob/python/VERSION.md>`_.
 
 Installation
 ============
@@ -28,12 +32,12 @@ Installation
 Automatic
 ---------
 
-Install from PyPI by running ``pip install lrgs``.
+Install from PyPI by running ``pip install lrgs``. Note that PyPI may not have the latest version.
 
 Manual
 ------
 
-Download ``lrgs/lrgs.py`` and put it somewhere on your ``PYTHONPATH``. You will need to have the ``numpy`` and ``scipy`` packages installed.
+Download ``lrgs/`` and put it somewhere on your ``PYTHONPATH``. You will need to have the ``numpy`` and ``scipy`` packages installed.
 
 Usage and Help
 ==============
