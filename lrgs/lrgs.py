@@ -15,7 +15,7 @@ class Chain(dict):
                     bonus(self)
                 self.params._store(self, i)
                 if mention_every is not None and (i+1) % mention_every == 0:
-                    print 'Done with Gibbs iteration', i+1
+                    print('Done with Gibbs iteration', i+1)
             except KeyboardInterrupt:
                 break
     def extract(self, field, *args):
