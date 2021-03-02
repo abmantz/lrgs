@@ -1,1 +1,1 @@
-from lrgs import *
+from .lrgs import *
