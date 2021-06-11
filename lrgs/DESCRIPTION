@@ -1,8 +1,8 @@
 Package: lrgs
 Type: Package
 Title: Linear Regression by Gibbs Sampling
-Version: 0.5.4
-Date: 2018-05-17
+Version: 0.5.5
+Date: 2020-06-10
 Author: Adam Mantz
 Maintainer: Adam Mantz <amantz@slac.stanford.edu>
 Description: Implements a Gibbs sampler to do linear regression with multiple covariates, multiple responses, Gaussian measurement errors on covariates and responses, Gaussian intrinsic scatter, and a covariate prior distribution which is given by either a Gaussian mixture of specified size or a Dirichlet process with a Gaussian base distribution.

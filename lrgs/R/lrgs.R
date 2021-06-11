@@ -580,21 +580,22 @@ Gibbs.post2dataframe = function(p) {
         f[,n] = p[[n]]
       } else {
         if (length(d) == 2) {
-          for (i in 1:d[1]) f[,paste(n, i, sep='')] = p[[n]][i,]
+          for (i in 1:d[1]) f[,paste(n, i, sep='.')] = p[[n]][i,]
         } else {
           if (length(d) == 3) {
             for (i in 1:d[1]) {
               for (j in 1:d[2]) {
                 if (j < i & (n=='Sigma' | n=='U' | n=='W')) next # symmetric matrices
-                f[,paste(n, i, j, sep='')] = p[[n]][i,j,]
+                f[,paste(n, i, j, sep='.')] = p[[n]][i,j,]
               }
             }
           } else {
-            ## remaining case is Tau (4D, 1st 2 dimensions are a symmetric matrix)
-            for (i in 1:d[1])
-              for (j in i:d[2])
-                for (k in 1:d[3])
-                  f[,paste(n, i, j, k, sep='')] = p[[n]][i,j,k,]
+              ## remaining case is Tau (4D, 1st 2 dimensions are a symmetric matrix)
+              ## write as TauK.i.j to try to avoid confusion...
+              for (k in 1:d[3])
+                  for (i in 1:d[1])
+                      for (j in i:d[2])
+                          f[,paste(paste0(n, k), i, j, sep='.')] = p[[n]][i,j,k,]
           } # 3D
         } # 2D
       } # 1D

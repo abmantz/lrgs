@@ -1,5 +1,6 @@
 Version | Comments
 ------- | --------
+0.5.5   | Fixed post2dataframe so that column names will always be unique
 0.5.4   | Fixed a bug that occurred when p=1 and a starting value of Tau was passed
 0.5.3   | Fixed a bug that struck when p+m==1 --> CRAN
 0.5.2   | Fixed a bug that would strike when dirichlet=TRUE and *not* tracing G
