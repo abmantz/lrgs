@@ -1,0 +1,29 @@
+Gibbs.post2dataframe           package:lrgs            R Documentation
+
+Linear Regression by Gibbs Sampling
+
+Description:
+
+     Transforms a set of posterior samples produced by Gibbs.regression
+     into a data frame for more straightforward analysis.
+
+Usage:
+
+     Gibbs.post2dataframe(p)
+     
+Arguments:
+
+       p: an object returned from Gibbs.regression.
+
+Value:
+
+     A data frame with one column corresponding to each parameter
+     stored in post.
+
+Author(s):
+
+     Adam Mantz
+
+See Also:
+
+     ‘Gibbs.regression’
