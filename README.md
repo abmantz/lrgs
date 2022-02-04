@@ -25,6 +25,10 @@ Gaussian mixture           |  Dirichlet process
 :-------------------------:|:-------------------------:
 ![Mixture model](./pgm_mix.png) | ![Dirichlet process model](./pgm_dp.png)
 
+## Getting help
+
+In addition to some examples (below), the Python and R packages have online help in the usual way. If you want to figure something out before going to the hassle of installing anything, you can read the docstrings directly in the [Python code](https://github.com/abmantz/lrgs/tree/python/lrgs), or look at the formatted R equivalent in the [man](man/) folder of this branch.
+
 ## Example usage (R)
 These examples appear in the R documentation for the Gibbs.regression function. Each one creates a mock data set and then fits a linear model to it, and compares the results to traditional regression. You can see the results, including plots, in [this ipython notebook](notebooks/example_R.ipynb).
 
