@@ -11,8 +11,8 @@ Runs a Gibbs sampler to simulate the posterior distribution of a linear model wi
 Gibbs.regression(x.in, y.in, M, Nsamples, Ngauss = 1, dirichlet=FALSE,
  M.inv = NULL, intercept = TRUE, trace = "bs", fix = "", start = list(),
  B.prior.mean=NULL, B.prior.cov=NULL, Sigma.prior.scale=NULL,
- Sigma.prior.dof=-1, dp.prior.alpha=NULL, dp.prior.beta=NULL,
- mention.every=NA, save.every=NA, save.to=NA)
+ Sigma.prior.dof=-1, pi.prior.concentration=1, dp.prior.alpha=NULL,
+ dp.prior.beta=NULL, mention.every=NA, save.every=NA, save.to=NA)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -60,6 +60,9 @@ optional matrix giving the scale parameter of an inverse-Wishart prior to be app
 }
   \item{Sigma.prior.dof}{
 number of degrees of freedom for the inverse-Wishart prior on the intrinsic covariance. Default is -1, which corresponds to the Jeffreys (i.e. minimally informative) prior when the default scale matrix is used. Using -(m+1) degrees of freedom with the default scale matrix corresponds to a prior that is uniform in det(Sigma).
+}
+  \item{pi.prior.concentration}{
+concentration parameter of the Dirichlet prior on the proportions of the Gaussian mixture model (can be a scalar or vector of length Ngauss).
 }
   \item{dp.prior.alpha}{
 shape paramerer of a Gamma prior to be applied to the Dirichlet process concentration parameter, if dirichlet=TRUE.

@@ -17,7 +17,7 @@ rdirichlet = function(alpha) {
   y / sum(y)
 }
 
-Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, M.inv=NULL, intercept=TRUE, trace='bs', fix='', start=list(), B.prior.mean=NULL, B.prior.cov=NULL, Sigma.prior.scale=NULL, Sigma.prior.dof=-1, dp.prior.alpha=NULL, dp.prior.beta=NULL, mention.every=NA, save.every=NA, save.to=NA) {
+Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, M.inv=NULL, intercept=TRUE, trace='bs', fix='', start=list(), B.prior.mean=NULL, B.prior.cov=NULL, Sigma.prior.scale=NULL, Sigma.prior.dof=-1, pi.prior.concentration=1, dp.prior.alpha=NULL, dp.prior.beta=NULL, mention.every=NA, save.every=NA, save.to=NA) {
   ## n data points, p covariates and m responses
   ## x.in should be n*p, and y.in n*m
   ## but also allow x.in and/or y.in to be vectors (i.e. p=1 and/or m=1)
@@ -275,6 +275,7 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
   } else {
     if (!is.matrix(Sigma.prior.scale) | nrow(Sigma.prior.scale) != m | ncol(Sigma.prior.scale) != m) stop(paste('Gibbs.regression: Sigma.prior.scale argument must be a', m, 'x', m, 'matrix'))
   }
+  if (length(pi.prior.concentration) != 1 & length(pi.prior.concentration) != Ngauss) stop(paste('pi.prior.concentration must be a vector of length 1 or', Ngauss))
   ##
   if (return.X) res$X = array(dim=c(n, p+pin, Nsamples))
   if (return.Y) res$Y = array(dim=c(n, m, Nsamples))
@@ -315,7 +316,7 @@ Gibbs.regression = function(x.in, y.in, M, Nsamples, Ngauss=1, dirichlet=FALSE, 
     ##
     ## update the component proportions
     if (!nogauss & update.pi) {
-      ppii = rdirichlet(1 + nG)
+      ppii = rdirichlet(pi.prior.concentration + nG)
     }
     ##
     ## update the intrinsic scatter
